@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Money Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12211E">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Money Tracker">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+  :root{
+    --ink:#12211E; --surface:#1B2E29; --surface-2:#22392F;
+    --paper:#EFE6D3; --gold:#D4A24C; --gold-dim:#8C6E38;
+    --green:#4F9D69; --rust:#C1604A; --rust-dim:#7A3B2E;
+    --muted:#8FA39A; --line: rgba(239,230,212,0.14);
+    --radius:14px; --display:'Fraunces',serif; --body:'Public Sans',-apple-system,sans-serif; --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--ink); color:var(--paper); font-family:var(--body); overscroll-behavior-y:none;}
+  body{padding-bottom:78px; min-height:100vh;}
+  h1,h2,h3{font-family:var(--display); margin:0; font-weight:600; letter-spacing:-0.01em;}
+  button{font-family:var(--body); cursor:pointer;}
+  input,select,textarea{font-family:var(--body); background:var(--surface-2); color:var(--paper); border:1px solid var(--line); border-radius:10px; padding:11px 12px; width:100%; font-size:15px;}
+  input::placeholder{color:var(--muted);}
+  .mono{font-family:var(--mono);}
+  .stitch{height:10px; width:100%; background-image:repeating-linear-gradient(115deg,var(--gold) 0 6px,transparent 6px 14px); opacity:.55; margin:2px 0 18px;}
+  .stitch.thin{height:2px; background-image:repeating-linear-gradient(115deg,var(--line) 0 5px,transparent 5px 10px); opacity:1; margin:14px 0;}
+  header.top{padding:22px 18px 14px; background:linear-gradient(180deg,var(--surface) 0%,var(--ink) 100%); position:sticky; top:0; z-index:5; border-bottom:1px solid var(--line);}
+  .brand{display:flex; align-items:baseline; justify-content:space-between;}
+  .brand .name{font-family:var(--display); font-size:21px; color:var(--paper);}
+  .brand .tag{font-size:11px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase;}
+  main{padding:16px; max-width:520px; margin:0 auto;}
+  .screen{display:none;} .screen.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+  .hero{background:linear-gradient(135deg,var(--surface-2),var(--surface)); border:1px solid var(--line); border-radius:18px; padding:20px; margin-bottom:18px;}
+  .hero .eyebrow{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold);}
+  .hero .amt{font-family:var(--mono); font-size:30px; font-weight:600; margin-top:6px; letter-spacing:-0.01em;}
+  .hero .breakdown{display:grid; grid-template-columns:1fr 1fr; gap:12px 14px; margin-top:14px;}
+  .hero .breakdown div{font-size:12px; color:var(--muted);}
+  .hero .breakdown span{display:block; font-family:var(--mono); font-size:15px; color:var(--paper); margin-top:2px;}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; margin-bottom:10px;}
+  .card .row{display:flex; justify-content:space-between; align-items:center;}
+  .card .title{font-weight:600; font-size:15px;} .card .sub{font-size:12.5px; color:var(--muted); margin-top:2px;}
+  .card .val{font-family:var(--mono); font-size:16px; font-weight:600;}
+  .val.pos{color:var(--green);} .val.neg{color:var(--rust);}
+  .section-head{display:flex; justify-content:space-between; align-items:center; margin:22px 0 10px;}
+  .section-head h2{font-size:17px;}
+  .add-btn{background:var(--gold); color:var(--ink); border:none; border-radius:20px; padding:7px 14px; font-weight:600; font-size:13px;}
+  .add-btn:active{transform:scale(.97);}
+  .ghost-btn{background:transparent; border:1px solid var(--line); color:var(--paper); border-radius:20px; padding:7px 14px; font-size:13px;}
+  .icon-btn{background:transparent; border:none; color:var(--muted); font-size:12px; padding:4px 6px; text-decoration:underline;}
+  .empty{text-align:center; padding:26px 10px; color:var(--muted); font-size:13px; border:1px dashed var(--line); border-radius:var(--radius);}
+  .empty b{display:block; color:var(--paper); font-family:var(--display); font-size:15.5px; margin-bottom:4px; font-weight:600;}
+  .due-tag{font-size:11px; padding:3px 8px; border-radius:20px; font-weight:600;}
+  .due-tag.soon{background:rgba(193,96,74,.18); color:#E08A73;} .due-tag.ok{background:rgba(79,157,105,.18); color:#7FC79A;}
+  .paid-tag{font-size:11px; padding:3px 8px; border-radius:20px; font-weight:600; background:rgba(79,157,105,.18); color:#7FC79A;}
+  .unpaid-tag{font-size:11px; padding:3px 8px; border-radius:20px; font-weight:600; background:rgba(193,96,74,.18); color:#E08A73;}
+  .type-tag{font-size:10.5px; padding:2px 7px; border-radius:20px; font-weight:600; background:rgba(212,162,76,.18); color:var(--gold); text-transform:uppercase; letter-spacing:.03em;}
+  .sub-tag{font-size:10px; padding:2px 7px; border-radius:20px; font-weight:600; background:rgba(143,163,154,.18); color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-left:6px;}
+  nav.tabbar{position:fixed; bottom:0; left:0; right:0; z-index:10; background:var(--surface); border-top:1px solid var(--line); display:flex; padding:6px 2px calc(6px + env(safe-area-inset-bottom,0)) 2px;}
+  nav.tabbar button{flex:1; background:none; border:none; color:var(--muted); font-size:10px; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 1px; border-radius:10px;}
+  nav.tabbar button.active{color:var(--gold);}
+  nav.tabbar button svg{width:19px; height:19px; stroke:currentColor; fill:none; stroke-width:1.7;}
+  .overlay{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:50; display:none; align-items:flex-end; justify-content:center;}
+  .overlay.active{display:flex;}
+  .sheet{background:var(--surface); width:100%; max-width:520px; border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom,0)) 18px; max-height:88vh; overflow-y:auto; animation:up .22s ease;}
+  @keyframes up{from{transform:translateY(20px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+  .sheet h3{font-size:18px; margin-bottom:14px;}
+  .field{margin-bottom:12px;} .field label{display:block; font-size:11.5px; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.04em;}
+  .field-row{display:flex; gap:10px;} .field-row .field{flex:1;}
+  .sheet-actions{display:flex; gap:10px; margin-top:16px;}
+  .btn-primary{flex:1; background:var(--gold); color:var(--ink); border:none; border-radius:12px; padding:13px; font-weight:700; font-size:15px;}
+  .btn-secondary{flex:1; background:transparent; border:1px solid var(--line); color:var(--paper); border-radius:12px; padding:13px; font-weight:600; font-size:15px;}
+  .btn-danger{background:transparent; border:1px solid var(--rust-dim); color:#E08A73; border-radius:12px; padding:11px; font-weight:600; font-size:13px; width:100%; margin-top:8px;}
+  .toast{position:fixed; bottom:88px; left:50%; transform:translateX(-50%); background:var(--gold); color:var(--ink); padding:10px 18px; border-radius:20px; font-size:13px; font-weight:600; z-index:60; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
+  .settings-item{display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid var(--line); gap:10px;}
+  .settings-item:last-child{border-bottom:none;}
+  .settings-item .label{font-size:14px;} .settings-item .desc{font-size:11.5px; color:var(--muted); margin-top:2px;}
+  .subhead{font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:18px 0 8px;}
+  .installment-row{display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .installment-row:last-child{border-bottom:none;}
+  .checkbox{width:18px; height:18px; accent-color:var(--gold); flex-shrink:0;}
+  .bar-chart{display:flex; align-items:flex-end; gap:6px; height:110px; margin-top:10px;}
+  .bar-chart .bar-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
+  .bar-chart .bar{width:100%; border-radius:4px 4px 0 0; min-height:2px;}
+  .bar-chart .bar-label{font-size:9.5px; color:var(--muted); margin-top:4px;}
+  .month-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
+  .month-grid .mfield{display:flex; flex-direction:column; gap:3px;}
+  .month-grid .mfield label{font-size:9.5px; color:var(--muted); text-transform:uppercase;}
+  .month-grid input{padding:8px 6px; font-size:12.5px;}
+  .budget-bar{background:var(--surface-2); border-radius:6px; height:6px; overflow:hidden; margin-top:6px;}
+  .payday-row{display:flex; justify-content:space-between; padding:6px 0; font-size:13px; border-bottom:1px solid var(--line);}
+  .payday-row:last-child{border-bottom:none;}
+  ::-webkit-scrollbar{width:0; height:0;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div><div class="name" id="pageTitle">Dashboard</div><div class="tag" id="pageDate"></div></div>
+    <div class="tag">Money Tracker</div>
+  </div>
+</header>
+
+<main>
+
+  <section class="screen active" id="screen-dashboard">
+    <div class="hero">
+      <div class="eyebrow">Net worth</div>
+      <div class="amt mono" id="netWorth">₱0.00</div>
+      <div class="stitch"></div>
+      <div class="breakdown">
+        <div>Wallet <span id="sumWallet" style="color:var(--paper)"></span></div>
+        <div>Savings <span id="sumSavingsHero" style="color:var(--green)"></span></div>
+        <div>I owe <span id="sumIOwe" style="color:var(--rust)"></span></div>
+        <div>I owed <span id="sumIOwed" style="color:var(--green)"></span></div>
+      </div>
+    </div>
+
+    <div class="section-head"><h2>Upcoming</h2></div>
+    <div id="upcomingList"></div>
+
+    <div class="section-head"><h2>Recent activity</h2><button class="add-btn" onclick="openTxnModal()">+ Add</button></div>
+    <div id="recentTxns"></div>
+  </section>
+
+  <section class="screen" id="screen-accounts">
+    <div class="section-head"><h2>Wallets & accounts</h2><button class="add-btn" onclick="openAccountModal()">+ Add</button></div>
+    <div id="accountsList"></div>
+  </section>
+
+  <section class="screen" id="screen-savings">
+    <div class="section-head"><h2>Savings wallets</h2><button class="add-btn" onclick="openSavingsWalletModal()">+ Add</button></div>
+    <div id="savingsWalletsList"></div>
+
+    <div class="section-head"><h2>Goals</h2><button class="add-btn" onclick="openSavingsModal()">+ Add</button></div>
+    <div id="savingsList"></div>
+
+    <div class="section-head"><h2>Paluwagan</h2><button class="add-btn" onclick="openPaluwaganModal()">+ Add</button></div>
+    <div id="paluwaganList"></div>
+  </section>
+
+  <section class="screen" id="screen-debts">
+    <div class="section-head"><h2>Debts & loans (I owe)</h2><button class="add-btn" onclick="openDebtModal()">+ Add</button></div>
+    <div id="debtsList"></div>
+
+    <div class="section-head"><h2>Receivables (owed to me)</h2><button class="add-btn" onclick="openReceivableModal()">+ Add</button></div>
+    <div id="receivablesList"></div>
+  </section>
+
+  <section class="screen" id="screen-more">
+    <div class="section-head"><h2>Investments</h2><button class="add-btn" onclick="openInvestmentModal()">+ Add</button></div>
+    <div class="sub" style="margin:-4px 0 10px">Set the amount you put in to trade/invest, then log growth, deposits, or withdrawals right on the card — the balance updates automatically.</div>
+    <div class="card" id="investmentsSummary" style="margin-bottom:10px"></div>
+    <div id="investmentsList"></div>
+
+    <div class="section-head"><h2>Budgets</h2><button class="add-btn" onclick="openBudgetModal()">+ Add</button></div>
+    <div id="budgetsList"></div>
+
+    <div class="section-head"><h2>Bills</h2><button class="add-btn" onclick="openBillModal('','bill')">+ Add</button></div>
+    <div id="billsList"></div>
+
+    <div class="section-head"><h2>Contributions</h2><button class="add-btn" onclick="openBillModal('','contribution')">+ Add</button></div>
+    <div id="contributionsList"></div>
+
+    <div class="section-head"><h2>Payday</h2></div>
+    <div class="card">
+      <div class="settings-item"><div><div class="label">Pay cycle</div></div><select id="payCycleSelect" style="width:auto" onchange="updateSettings()"><option>Weekly</option><option>Biweekly</option><option>Semi-monthly</option><option>Monthly</option></select></div>
+      <div class="settings-item"><div><div class="label">First / next payday</div></div><input type="date" id="nextPaydayInput" style="width:auto" onchange="updateSettings()"></div>
+      <div class="settings-item"><div><div class="label">How much you earn per payday</div><div class="desc">Used as a fallback/typical amount</div></div><input type="number" id="salaryPerCycle" style="width:110px" placeholder="0.00" onchange="updateSettings()"></div>
+      <div class="settings-item"><div><div class="label">Pay varies each day?</div><div class="desc">Log each day's amount instead of one fixed number — the pay period total is added up for you</div></div><input type="checkbox" class="checkbox" id="dailyPayMode" onchange="updateSettings()"></div>
+      <div class="stitch thin"></div>
+      <div class="sub" style="margin-bottom:4px">Upcoming paydays (for budgeting)</div>
+      <div id="paydaySchedule"></div>
+      <div id="dailyPaySection"></div>
+    </div>
+    <div class="section-head"><h2>Cash advance</h2><button class="add-btn" onclick="openCashAdvanceModal()">+ Add</button></div>
+    <div id="cashAdvancesList"></div>
+
+    <div class="section-head"><h2>13th month pay</h2></div>
+    <div class="card">
+      <div class="sub" style="margin-bottom:8px">Enter what you earned each month this year</div>
+      <div class="month-grid" id="monthlyIncomeGrid"></div>
+      <div class="stitch thin"></div>
+      <div class="row"><div class="sub">Estimated 13th month pay</div><div class="val pos" id="thirteenthEstimate">₱0.00</div></div>
+      <div class="settings-item" style="border:none; padding-top:10px"><div class="label">Received?</div><input type="checkbox" class="checkbox" id="thirteenthReceived" onchange="updateSettings()"></div>
+    </div>
+
+    <div class="section-head"><h2>Analytics</h2></div>
+    <div class="card">
+      <div class="sub" style="margin-bottom:4px">Income vs expense — last 6 months</div>
+      <div class="bar-chart" id="analyticsChart"></div>
+    </div>
+    <div class="card" id="topCategories"></div>
+
+    <div class="section-head"><h2>Categories</h2><button class="add-btn" onclick="openCategoryModal()">+ Add</button></div>
+    <div id="categoriesList"></div>
+
+    <div class="section-head"><h2>Data</h2></div>
+    <div class="card">
+      <div class="settings-item"><div><div class="label">Export backup</div><div class="desc">Save all your data as a JSON file</div></div><button class="ghost-btn" onclick="exportData()">Export</button></div>
+      <div class="settings-item"><div><div class="label">Restore backup</div><div class="desc">Load data from a JSON file</div></div><button class="ghost-btn" onclick="document.getElementById('importFile').click()">Import</button></div>
+      <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
+    </div>
+    <div class="card">
+      <div class="settings-item"><div><div class="label">Reset all data</div><div class="desc">Clears everything on this device. Cannot be undone.</div></div></div>
+      <button class="btn-danger" onclick="resetAll()">Erase all data</button>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar">
+  <button class="tab active" data-screen="dashboard" onclick="showScreen('dashboard')"><svg viewBox="0 0 24 24"><path d="M3 12l9-8 9 8"/><path d="M5 10v9h14v-9"/></svg>Home</button>
+  <button class="tab" data-screen="accounts" onclick="showScreen('accounts')"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>Wallets</button>
+  <button class="tab" data-screen="savings" onclick="showScreen('savings')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>Savings</button>
+  <button class="tab" data-screen="debts" onclick="showScreen('debts')"><svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>Utang</button>
+  <button class="tab" data-screen="more" onclick="showScreen('more')"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</button>
+</nav>
+
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   DATA
+========================================================= */
+const DEFAULT_DATA = {
+  accounts: [
+    {id:'a1', name:'GCash', type:'e-wallet', balance:0},
+    {id:'a2', name:'Maya', type:'e-wallet', balance:0},
+    {id:'a3', name:'BPI', type:'bank', balance:0},
+    {id:'a4', name:'MariBank', type:'bank', balance:0},
+    {id:'a5', name:'Cash', type:'cash', balance:0},
+  ],
+  savings: [],          // goals [{id,name,target,saved,deadline}]
+  savingsWallets: [],   // [{id,name,balance}]
+  paluwagan: [],        // [{id,name,amountPerRound,totalRounds,currentRound,payoutDate}]
+  debts: [],            // [{id,name,amount,remaining,dueDate,installments:[{id,amount,due,paid}]}]
+  receivables: [],      // [{id,name,amount,remaining,dueDate}]
+  investments: [],      // [{id,name,type,amount,notes}]  type: 'daily-earner'|'stocks'|'crypto'|'business'|'real-estate'|'other'
+  earnings: [],         // [{id,investmentId,date,amount,note}]
+  budgets: [],          // [{id,categoryId,limit}]
+  cashAdvances: [],     // [{id,amount,date,reason,repaid}]
+  dailyPay: [],         // [{id,date,amount,note}] — used when pay varies day to day
+  bills: [
+    {id:'b1', name:'Electricity', amount:0, dueDay:15, category:'bill', paid:false},
+    {id:'b2', name:'Water', amount:0, dueDay:15, category:'bill', paid:false},
+    {id:'b3', name:'SSS', amount:0, dueDay:30, category:'contribution', paid:false},
+    {id:'b4', name:'Pag-IBIG', amount:0, dueDay:30, category:'contribution', paid:false},
+    {id:'b5', name:'PhilHealth', amount:0, dueDay:30, category:'contribution', paid:false},
+  ],
+  transactions: [],     // [{id,type,amount,categoryId,accountId,date,note}]
+  categories: [
+    {id:'c1', name:'Sales', kind:'income'},
+    {id:'c2', name:'Stock / supplies', kind:'expense'},
+    {id:'c3', name:'Food', kind:'expense'},
+    {id:'c4', name:'Bills', kind:'expense'},
+    {id:'c5', name:'Transport', kind:'expense'},
+  ],
+  monthlyIncome: {},    // {2026: {Jan:0,...Dec:0}}
+  settings: {payCycle:'Monthly', nextPayday:'', salaryPerCycle:0, thirteenthReceived:false, dailyPayMode:false}
+};
+
+let DATA = load();
+function load(){
+  try{
+    const raw = localStorage.getItem('moneytracker_data');
+    if(!raw) return JSON.parse(JSON.stringify(DEFAULT_DATA));
+    const parsed = JSON.parse(raw);
+    for(const k in DEFAULT_DATA){ if(!(k in parsed)) parsed[k] = DEFAULT_DATA[k]; }
+    return parsed;
+  }catch(e){ return JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+}
+function save(){ localStorage.setItem('moneytracker_data', JSON.stringify(DATA)); }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function peso(n){ n=Number(n)||0; return '₱'+n.toLocaleString('en-PH',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+
+/* ---- date helpers: always parse/format in LOCAL time, never UTC,
+   so a date typed as e.g. Sept 1 always stays Sept 1 (no off-by-one). ---- */
+function toLocalDateStr(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+function parseLocalDate(str){ if(!str) return null; const [y,m,d]=str.split('-').map(Number); return new Date(y, m-1, d); }
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function lastDayOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
+function stripTime(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function fmtDate(d){ if(!d) return ''; return d.toLocaleDateString('en-PH',{month:'short', day:'numeric', year:'numeric'}); }
+function daysUntil(d){ const today=stripTime(new Date()); const t=stripTime(d); return Math.round((t-today)/86400000); }
+
+/* =========================================================
+   NAV
+========================================================= */
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.tabbar .tab').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.tabbar .tab[data-screen="${name}"]`).classList.add('active');
+  const titles = {dashboard:'Dashboard', accounts:'Wallets & Accounts', savings:'Savings', debts:'Debts & Receivables', more:'More'};
+  document.getElementById('pageTitle').textContent = titles[name];
+  renderAll();
+}
+document.getElementById('pageDate').textContent = new Date().toLocaleDateString('en-PH',{weekday:'long', month:'long', day:'numeric'});
+
+/* =========================================================
+   MODAL HELPERS
+========================================================= */
+function openSheet(html){ document.getElementById('sheet').innerHTML = html; document.getElementById('overlay').classList.add('active'); }
+function closeSheet(){ document.getElementById('overlay').classList.remove('active'); }
+document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeSheet(); });
+
+/* =========================================================
+   ACCOUNTS (wallets)
+========================================================= */
+function openAccountModal(id){
+  const acc = id ? DATA.accounts.find(a=>a.id===id) : null;
+  openSheet(`
+    <h3>${acc?'Edit wallet':'Add wallet / account'}</h3>
+    <div class="field"><label>Name</label><input id="f-name" value="${acc?acc.name:''}" placeholder="e.g. GCash"></div>
+    <div class="field"><label>Type</label><select id="f-type">${['e-wallet','bank','cash','other'].map(t=>`<option ${acc&&acc.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+    <div class="field"><label>Balance</label><input id="f-balance" type="number" step="0.01" value="${acc?acc.balance:0}"></div>
+    <div class="sheet-actions">
+      <button class="btn-secondary" onclick="closeSheet()">Cancel</button>
+      <button class="btn-primary" onclick="saveAccount('${id||''}')">Save</button>
+    </div>
+    ${acc?`<button class="btn-danger" onclick="deleteAccount('${id}')">Delete wallet</button>`:''}
+  `);
+}
+function saveAccount(id){
+  const name=document.getElementById('f-name').value.trim();
+  const type=document.getElementById('f-type').value;
+  const balance=parseFloat(document.getElementById('f-balance').value)||0;
+  if(!name) return toast('Enter a name');
+  if(id){ const a=DATA.accounts.find(a=>a.id===id); a.name=name; a.type=type; a.balance=balance; }
+  else DATA.accounts.push({id:uid(), name, type, balance});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteAccount(id){ DATA.accounts=DATA.accounts.filter(a=>a.id!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+function renderAccounts(){
+  const el=document.getElementById('accountsList');
+  if(!DATA.accounts.length){ el.innerHTML=`<div class="empty"><b>No wallets yet</b>Add your GCash, bank, or cash on hand.</div>`; return; }
+  el.innerHTML = DATA.accounts.map(a=>`
+    <div class="card" onclick="openAccountModal('${a.id}')">
+      <div class="row"><div><div class="title">${a.name}</div><div class="sub">${a.type}</div></div><div class="val">${peso(a.balance)}</div></div>
+    </div>`).join('');
+}
+
+/* =========================================================
+   TRANSACTIONS
+========================================================= */
+function openTxnModal(id){
+  const t = id ? DATA.transactions.find(t=>t.id===id) : null;
+  const cats = DATA.categories;
+  openSheet(`
+    <h3>${t?'Edit transaction':'Add transaction'}</h3>
+    <div class="field-row">
+      <div class="field"><label>Type</label><select id="f-type" onchange="renderTxnCatOptions()">
+        <option value="income" ${t&&t.type==='income'?'selected':''}>Income</option>
+        <option value="expense" ${!t||t.type==='expense'?'selected':''}>Expense</option>
+      </select></div>
+      <div class="field"><label>Amount</label><input id="f-amount" type="number" step="0.01" value="${t?t.amount:''}"></div>
+    </div>
+    <div class="field"><label>Category</label><select id="f-cat"></select></div>
+    <div class="field"><label>Wallet</label><select id="f-acc">${DATA.accounts.map(a=>`<option value="${a.id}" ${t&&t.accountId===a.id?'selected':''}>${a.name}</option>`).join('')}</select></div>
+    <div class="field"><label>Date</label><input id="f-date" type="date" value="${t?t.date:toLocalDateStr(new Date())}"></div>
+    <div class="field"><label>Note</label><input id="f-note" value="${t?(t.note||''):''}" placeholder="optional"></div>
+    <div class="sheet-actions">
+      <button class="btn-secondary" onclick="closeSheet()">Cancel</button>
+      <button class="btn-primary" onclick="saveTxn('${id||''}')">Save</button>
+    </div>
+    ${t?`<button class="btn-danger" onclick="deleteTxn('${id}')">Delete</button>`:''}
+  `);
+  renderTxnCatOptions(t?t.categoryId:null);
+}
+function renderTxnCatOptions(selected){
+  const type=document.getElementById('f-type').value;
+  const sel=document.getElementById('f-cat');
+  const opts=DATA.categories.filter(c=>c.kind===type);
+  sel.innerHTML = opts.map(c=>`<option value="${c.id}" ${c.id===selected?'selected':''}>${c.name}</option>`).join('') || `<option value="">No categories — add one in More</option>`;
+}
+function saveTxn(id){
+  const type=document.getElementById('f-type').value;
+  const amount=parseFloat(document.getElementById('f-amount').value)||0;
+  const categoryId=document.getElementById('f-cat').value;
+  const accountId=document.getElementById('f-acc').value;
+  const date=document.getElementById('f-date').value || toLocalDateStr(new Date());
+  const note=document.getElementById('f-note').value.trim();
+  if(!amount) return toast('Enter an amount');
+  const acc=DATA.accounts.find(a=>a.id===accountId);
+  if(id){
+    const old=DATA.transactions.find(t=>t.id===id);
+    const oldAcc=DATA.accounts.find(a=>a.id===old.accountId);
+    if(oldAcc) oldAcc.balance += old.type==='income' ? -old.amount : old.amount; // revert
+    old.type=type; old.amount=amount; old.categoryId=categoryId; old.accountId=accountId; old.date=date; old.note=note;
+  } else {
+    DATA.transactions.unshift({id:uid(), type, amount, categoryId, accountId, date, note});
+  }
+  if(acc) acc.balance += type==='income' ? amount : -amount;
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteTxn(id){
+  const t=DATA.transactions.find(t=>t.id===id);
+  const acc=DATA.accounts.find(a=>a.id===t.accountId);
+  if(acc) acc.balance += t.type==='income' ? -t.amount : t.amount;
+  DATA.transactions=DATA.transactions.filter(t=>t.id!==id);
+  save(); closeSheet(); renderAll(); toast('Deleted');
+}
+function renderRecentTxns(){
+  const el=document.getElementById('recentTxns');
+  const list=[...DATA.transactions].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
+  if(!list.length){ el.innerHTML=`<div class="empty"><b>No activity yet</b>Log an income or expense to get started.</div>`; return; }
+  el.innerHTML=list.map(t=>{
+    const cat=DATA.categories.find(c=>c.id===t.categoryId);
+    return `<div class="card" onclick="openTxnModal('${t.id}')">
+      <div class="row"><div><div class="title">${cat?cat.name:'Uncategorized'}</div><div class="sub">${fmtDate(parseLocalDate(t.date))}${t.note?' · '+t.note:''}</div></div>
+      <div class="val ${t.type==='income'?'pos':'neg'}">${t.type==='income'?'+':'-'}${peso(t.amount)}</div></div>
+    </div>`;
+  }).join('');
+}
+
+/* =========================================================
+   SAVINGS GOALS
+========================================================= */
+function openSavingsModal(id){
+  const g = id ? DATA.savings.find(g=>g.id===id) : null;
+  openSheet(`
+    <h3>${g?'Edit goal':'Add savings goal'}</h3>
+    <div class="field"><label>Goal name</label><input id="f-name" value="${g?g.name:''}" placeholder="e.g. Emergency fund"></div>
+    <div class="field-row">
+      <div class="field"><label>Target</label><input id="f-target" type="number" step="0.01" value="${g?g.target:''}"></div>
+      <div class="field"><label>Saved so far</label><input id="f-saved" type="number" step="0.01" value="${g?g.saved:0}"></div>
+    </div>
+    <div class="field"><label>Target date</label><input id="f-deadline" type="date" value="${g?g.deadline||'':''}"></div>
+    <div class="sheet-actions">
+      <button class="btn-secondary" onclick="closeSheet()">Cancel</button>
+      <button class="btn-primary" onclick="saveSavingsGoal('${id||''}')">Save</button>
+    </div>
+    ${g?`<button class="btn-danger" onclick="deleteSavingsGoal('${id}')">Delete</button>`:''}
+  `);
+}
+function saveSavingsGoal(id){
+  const name=document.getElementById('f-name').value.trim();
+  const target=parseFloat(document.getElementById('f-target').value)||0;
+  const saved=parseFloat(document.getElementById('f-saved').value)||0;
+  const deadline=document.getElementById('f-deadline').value;
+  if(!name) return toast('Enter a name');
+  if(id){ const g=DATA.savings.find(g=>g.id===id); g.name=name; g.target=target; g.saved=saved; g.deadline=deadline; }
+  else DATA.savings.push({id:uid(), name, target, saved, deadline});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteSavingsGoal(id){ DATA.savings=DATA.savings.filter(g=>g.id!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+function renderSavingsGoals(){
+  const el=document.getElementById('savingsList');
+  if(!DATA.savings.length){ el.innerHTML=`<div class="empty"><b>No goals yet</b>Set a target and track your progress.</div>`; return; }
+  el.innerHTML=DATA.savings.map(g=>{
+    const pct=g.target? Math.min(100, Math.round(g.saved/g.target*100)) : 0;
+    return `<div class="card" onclick="openSavingsModal('${g.id}')">
+      <div class="row"><div class="title">${g.name}</div><div class="val pos">${peso(g.saved)} / ${peso(g.target)}</div></div>
+      <div class="budget-bar"><div style="height:100%; width:${pct}%; background:var(--green)"></div></div>
+      <div class="sub" style="margin-top:6px">${pct}%${g.deadline?' · by '+fmtDate(parseLocalDate(g.deadline)):''}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---- savings wallets ---- */
+function openSavingsWalletModal(id){
+  const w = id ? DATA.savingsWallets.find(w=>w.id===id) : null;
+  openSheet(`
+    <h3>${w?'Edit savings wallet':'Add savings wallet'}</h3>
+    <div class="field"><label>Name</label><input id="f-name" value="${w?w.name:''}" placeholder="e.g. Time deposit"></div>
+    <div class="field"><label>Balance</label><input id="f-balance" type="number" step="0.01" value="${w?w.balance:0}"></div>
+    <div class="sheet-actions"><button class="btn-secondary" onclick="closeSheet()">Cancel</button><button class="btn-primary" onclick="saveSavingsWallet('${id||''}')">Save</button></div>
+    ${w?`<button class="btn-danger" onclick="deleteSavingsWallet('${id}')">Delete</button>`:''}
+  `);
+}
+function saveSavingsWallet(id){
+  const name=document.getElementById('f-name').value.trim();
+  const balance=parseFloat(document.getElementById('f-balance').value)||0;
+  if(!name) return toast('Enter a name');
+  if(id){ const w=DATA.savingsWallets.find(w=>w.id===id); w.name=name; w.balance=balance; }
+  else DATA.savingsWallets.push({id:uid(), name, balance});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteSavingsWallet(id){ DATA.savingsWallets=DATA.savingsWallets.filter(w=>w.id!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+function renderSavingsWallets(){
+  const el=document.getElementById('savingsWalletsList');
+  if(!DATA.savingsWallets.length){ el.innerHTML=`<div class="empty"><b>No savings wallets</b>Separate long-term savings from your spending money.</div>`; return; }
+  el.innerHTML=DATA.savingsWallets.map(w=>`<div class="card" onclick="openSavingsWalletModal('${w.id}')"><div class="row"><div class="title">${w.name}</div><div class="val pos">${peso(w.balance)}</div></div></div>`).join('');
+}
+
+/* ---- paluwagan ---- */
+function openPaluwaganModal(id){
+  const p = id ? DATA.paluwagan.find(p=>p.id===id) : null;
+  openSheet(`
+    <h3>${p?'Edit paluwagan':'Add paluwagan'}</h3>
+    <div class="field"><label>Name</label><input id="f-name" value="${p?p.name:''}" placeholder="e.g. Office paluwagan"></div>
+    <div class="field-row">
+      <div class="field"><label>Amount per round</label><input id="f-amt" type="number" step="0.01" value="${p?p.amountPerRound:''}"></div>
+      <div class="field"><label>Total rounds</label><input id="f-total" type="number" value="${p?p.totalRounds:''}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Current round</label><input id="f-current" type="number" value="${p?p.currentRound:1}"></div>
+      <div class="field"><label>Your payout date</label><input id="f-payout" type="date" value="${p?p.payoutDate||'':''}"></div>
+    </div>
+    <div class="sheet-actions"><button class="btn-secondary" onclick="closeSheet()">Cancel</button><button class="btn-primary" onclick="savePaluwagan('${id||''}')">Save</button></div>
+    ${p?`<button class="btn-danger" onclick="deletePaluwagan('${id}')">Delete</button>`:''}
+  `);
+}
+function savePaluwagan(id){
+  const name=document.getElementById('f-name').value.trim();
+  const amountPerRound=parseFloat(document.getElementById('f-amt').value)||0;
+  const totalRounds=parseInt(document.getElementById('f-total').value)||0;
+  const currentRound=parseInt(document.getElementById('f-current').value)||1;
+  const payoutDate=document.getElementById('f-payout').value;
+  if(!name) return toast('Enter a name');
+  if(id){ const p=DATA.paluwagan.find(p=>p.id===id); Object.assign(p,{name,amountPerRound,totalRounds,currentRound,payoutDate}); }
+  else DATA.paluwagan.push({id:uid(), name, amountPerRound, totalRounds, currentRound, payoutDate});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deletePaluwagan(id){ DATA.paluwagan=DATA.paluwagan.filter(p=>p.id!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+function renderPaluwagan(){
+  const el=document.getElementById('paluwaganList');
+  if(!DATA.paluwagan.length){ el.innerHTML=`<div class="empty"><b>No paluwagan tracked</b>Add one to keep tabs on your rounds and payout.</div>`; return; }
+  el.innerHTML=DATA.paluwagan.map(p=>`<div class="card" onclick="openPaluwaganModal('${p.id}')">
+    <div class="row"><div class="title">${p.name}</div><div class="val">${peso(p.amountPerRound)}/round</div></div>
+    <div class="sub" style="margin-top:4px">Round ${p.currentRound} of ${p.totalRounds}${p.payoutDate?' · payout '+fmtDate(parseLocalDate(p.payoutDate)):''}</div>
+  </div>`).join('');
+}
+
+/* =========================================================
+   DEBTS (I owe) — with editable installments
+========================================================= */
+function openDebtModal(id){
+  const d = id ? DATA.debts.find(d=>d.id===id) : null;
+  const hasSchedule = d && d.installments && d.installments.length;
+  openSheet(`
+    <h3>${d?'Edit debt':'Add debt / loan'}</h3>
+    <div class="field"><label>Name / lender</label><input id="f-name" value="${d?d.name:''}" placeholder="e.g. Tala, Pag-asa, Ate Lyn"></div>
+    <div class="field-row">
+      <div class="field"><label>Total amount</label><input id="f-amount" type="number" step="0.01" value="${d?d.amount:''}"></div>
+      <div class="field"><label>Remaining</label><input id="f-remaining" type="number" step="0.01" value="${d?d.remaining:''}" ${hasSchedule?'disabled':''}></div>
+    </div>
+    ${hasSchedule?`<div class="sub" style="margin-top:-6px; margin-bottom:12px;">Remaining is calculated from the payment schedule below — check off installments to update it.</div>`:''}
+    <div class="field"><label>Next due date</label><input id="f-due" type="date" value="${d?d.dueDate||'':''}"></div>
+    <div class="sheet-actions"><button class="btn-secondary" onclick="closeSheet()">Cancel</button><button class="btn-primary" onclick="saveDebt('${id||''}')">Save</button></div>
+    ${d?`<button class="ghost-btn" style="width:100%; margin-top:10px" onclick="openScheduleModal('${id}')">📅 Payment schedule</button>`:`<div class="sub" style="margin-top:10px">Save the debt first, then open it again to set up a weekly/monthly payment schedule (like Pag-asa's ₱600/week).</div>`}
+    ${d?`<button class="btn-danger" onclick="deleteDebt('${id}')">Delete</button>`:''}
+  `);
+}
+function saveDebt(id){
+  const name=document.getElementById('f-name').value.trim();
+  const amount=parseFloat(document.getElementById('f-amount').value)||0;
+  const remainingInput=document.getElementById('f-remaining');
+  const remaining=remainingInput.disabled ? (DATA.debts.find(d=>d.id===id)||{}).remaining : (parseFloat(remainingInput.value)||amount);
+  const dueDate=document.getElementById('f-due').value;
+  if(!name) return toast('Enter a name');
+  if(id){ const d=DATA.debts.find(d=>d.id===id); Object.assign(d,{name,amount,remaining:(remaining!=null?remaining:amount),dueDate}); }
+  else DATA.debts.push({id:uid(), name, amount, remaining, dueDate, installments:[]});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteDebt(id){ DATA.debts=DATA.debts.filter(d=>d.id!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+function renderDebts(){
+  const el=document.getElementById('debtsList');
+  if(!DATA.debts.length){ el.innerHTML=`<div class="empty"><b>No debts logged</b>Track what you owe and when it's due.</div>`; return; }
+  el.innerHTML=DATA.debts.map(d=>{
+    const nextInst = (d.installments||[]).find(i=>!i.paid);
+    const due = nextInst ? parseLocalDate(nextInst.due) : (d.dueDate?parseLocalDate(d.dueDate):null);
+    const tag = due ? `<span class="due-tag ${daysUntil(due)<=3?'soon':'ok'}">${fmtDate(due)}</span>` : '';
+    const done = d.remaining<=0;
+    return `<div class="card">
+      <div class="row" onclick="openDebtModal('${d.id}')" style="cursor:pointer"><div class="title">${d.name}</div><div class="val ${done?'pos':'neg'}">${done?'Paid off':peso(d.remaining)}</div></div>
+      <div class="row" style="margin-top:4px; cursor:pointer" onclick="openDebtModal('${d.id}')"><div class="sub">of ${peso(d.amount)} total${nextInst?' · next: '+peso(nextInst.amount):''}</div>${tag}</div>
+      <button class="ghost-btn" style="width:100%; margin-top:10px" onclick="openScheduleModal('${d.id}')">📅 Payment schedule${d.installments&&d.installments.length?' ('+d.installments.filter(i=>i.paid).length+'/'+d.installments.length+' paid)':''}</button>
+    </div>`;
+  }).join('');
+}
+
+/* ---- payment schedule (installments) for a debt — e.g. Pag-asa ₱600/week ---- */
+function openScheduleModal(id){
+  const d = DATA.debts.find(d=>d.id===id);
+  if(!d.installments) d.installments=[];
+  openSheet(`
+    <h3>Payment schedule — ${d.name}</h3>
+    <div class="subhead" style="margin-top:0">Generate installments</div>
+    <div class="field-row">
+      <div class="field"><label>Amount per payment</label><input id="f-instAmt" type="number" step="0.01" placeholder="e.g. 600"></div>
+      <div class="field"><label>How many</label><input id="f-instCount" type="number" placeholder="e.g. 20"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>First payment date</label><input id="f-instStart" type="date" value="${d.dueDate||''}"></div>
+      <div class="field"><label>Every</label><select id="f-instFreq"><option value="7">Week</option><option value="14">2 weeks</option><option value="30">Month</option></select></div>
+    </div>
+    <div class="sub" style="margin-bottom:10px">Whatever date you pick becomes the first payment exactly — e.g. pick Sep 1 and the first installment is Sep 1, not Aug 31 or Sep 2.</div>
+    <button class="btn-primary" style="width:100%" onclick="generateSchedule('${id}')">Generate schedule</button>
+    <div class="stitch thin"></div>
+    <div class="subhead" style="margin-top:0">Installments</div>
+    <div id="instList">${renderInstallments(d)}</div>
+    <div class="sheet-actions"><button class="btn-secondary" style="flex:1" onclick="closeSheet()">Close</button>${d.installments.length?`<button class="btn-danger" style="flex:1; margin-top:0" onclick="clearSchedule('${id}')">Clear schedule</button>`:''}</div>
+  `);
+}
+function renderInstallments(d){
+  if(!d.installments || !d.installments.length) return `<div class="sub">No installments yet — generate a schedule above.</div>`;
+  return d.installments.map(i=>`
+    <div class="installment-row">
+      <input type="checkbox" class="checkbox" ${i.paid?'checked':''} onchange="toggleInstallment('${d.id}','${i.id}')">
+      <div style="flex:1; margin-left:10px;">${fmtDate(parseLocalDate(i.due))}</div>
+      <div class="mono">${peso(i.amount)}</div>
+    </div>`).join('');
+}
+function generateSchedule(id){
+  const d = DATA.debts.find(d=>d.id===id);
+  const amt = parseFloat(document.getElementById('f-instAmt').value)||0;
+  const count = parseInt(document.getElementById('f-instCount').value)||0;
+  const startStr = document.getElementById('f-instStart').value;
+  const stepDays = parseInt(document.getElementById('f-instFreq').value);
+  if(amt<=0||count<=0||!startStr){ toast('Fill in amount, count, and first payment date'); return; }
+  const remainingToCover = Math.max(0, d.remaining);
+  const installments = [];
+  let dt = parseLocalDate(startStr); // exact local date the user picked — no timezone shift
+  let runningTotal = 0;
+  for(let n=0;n<count;n++){
+    let instAmt = amt;
+    if(n===count-1){ instAmt = Math.max(0, remainingToCover - runningTotal); if(instAmt<=0) instAmt = amt; }
+    runningTotal += instAmt;
+    installments.push({id:uid(), due: toLocalDateStr(dt), amount: Math.round(instAmt*100)/100, paid:false});
+    dt = addDays(dt, stepDays);
+  }
+  d.installments = installments;
+  save(); openScheduleModal(id); toast('Schedule generated, starting ' + fmtDate(parseLocalDate(startStr)));
+}
+function toggleInstallment(debtId, instId){
+  const d = DATA.debts.find(x=>x.id===debtId);
+  const i = d.installments.find(x=>x.id===instId);
+  i.paid = !i.paid;
+  const paidTotal = d.installments.filter(x=>x.paid).reduce((s,x)=>s+x.amount,0);
+  d.remaining = Math.max(0, d.amount - paidTotal);
+  save(); openScheduleModal(debtId); renderAll();
+}
+function clearSchedule(id){
+  const d = DATA.debts.find(d=>d.id===id);
+  d.installments = [];
+  save(); openScheduleModal(id); renderAll(); toast('Schedule cleared');
+}
+
+/* ---- receivables (owed to me) ---- */
+function openReceivableModal(id){
+  const r = id ? DATA.receivables.find(r=>r.id===id) : null;
+  openSheet(`
+    <h3>${r?'Edit receivable':'Add receivable'}</h3>
+    <div class="field"><label>Who owes you</label><input id="f-name" value="${r?r.name:''}" placeholder="e.g. Kuya Jun"></div>
+    <div class="field-row">
+      <div class="field"><label>Total amount</label><input id="f-amount" type="number" step="0.01" value="${r?r.amount:''}"></div>
+      <div class="field"><label>Remaining</label><input id="f-remaining" type="number" step="0.01" value="${r?r.remaining:''}"></div>
+    </div>
+    <div class="field"><label>Expected date</label><input id="f-due" type="date" value="${r?r.dueDate||'':''}"></div>
+    <div class="sheet-actions"><button class="btn-secondary" onclick="closeSheet()">Cancel</button><button class="btn-primary" onclick="saveReceivable('${id||''}')">Save</button></div>
+    ${r?`<button class="btn-danger" onclick="deleteReceivable('${id}')">Delete</button>`:''}
+  `);
+}
+function saveReceivable(id){
+  const name=document.getElementById('f-name').value.trim();
+  const amount=parseFloat(document.getElementById('f-amount').value)||0;
+  const remaining=parseFloat(document.getElementById('f-remaining').value)||amount;
+  const dueDate=document.getElementById('f-due').value;
+  if(!name) return toast('Enter a name');
+  if(id){ const r=DATA.receivables.find(r=>r.id===id); Object.assign(r,{name,amount,remaining,dueDate}); }
+  else DATA.receivables.push({id:uid(), name, amount, remaining, dueDate});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteReceivable(id){ DATA.receivables=DATA.receivables.filter(r=>r.id!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+function renderReceivables(){
+  const el=document.getElementById('receivablesList');
+  if(!DATA.receivables.length){ el.innerHTML=`<div class="empty"><b>Nothing owed to you</b>Log it here so it's not forgotten.</div>`; return; }
+  el.innerHTML=DATA.receivables.map(r=>{
+    const due=r.dueDate?parseLocalDate(r.dueDate):null;
+    return `<div class="card" onclick="openReceivableModal('${r.id}')">
+      <div class="row"><div class="title">${r.name}</div><div class="val pos">${peso(r.remaining)}</div></div>
+      <div class="sub" style="margin-top:4px">of ${peso(r.amount)} total${due?' · expected '+fmtDate(due):''}</div>
+    </div>`;
+  }).join('');
+}
+
+/* =========================================================
+   INVESTMENTS (combined with growth/deposit/withdrawal log —
+   the amount you put in grows or shrinks as you log entries)
+========================================================= */
+const INVESTMENT_TYPES = {
+  'trading':'Trading', 'daily-earner':'Daily earner', 'stocks':'Stocks', 'crypto':'Crypto',
+  'business':'Business', 'real-estate':'Real estate', 'other':'Other'
+};
+const ENTRY_KINDS = {
+  'earning': {label:'Earning (grew)', sign:1},
+  'deposit': {label:'Deposit (added more capital)', sign:1},
+  'withdrawal': {label:'Withdrawal (took out)', sign:-1}
+};
+function applyEntryEffect(entry, dir){ // dir: 1 to apply, -1 to revert
+  const inv=DATA.investments.find(i=>i.id===entry.investmentId);
+  if(!inv) return;
+  const k=ENTRY_KINDS[entry.kind]||ENTRY_KINDS.earning;
+  inv.amount += dir * k.sign * entry.amount;
+}
+function openInvestmentModal(id){
+  const inv = id ? DATA.investments.find(i=>i.id===id) : null;
+  openSheet(`
+    <h3>${inv?'Edit investment':'Add investment'}</h3>
+    <div class="field"><label>Name</label><input id="f-name" value="${inv?inv.name:''}" placeholder="e.g. My trading account"></div>
+    <div class="field"><label>Type / sub-category</label><select id="f-itype">${Object.entries(INVESTMENT_TYPES).map(([k,v])=>`<option value="${k}" ${(inv?inv.type===k:k==='trading')?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div class="field"><label>${inv?'Current balance':'Amount you\u2019re putting in'}</label><input id="f-amount" type="number" step="0.01" value="${inv?inv.amount:''}" placeholder="e.g. 7000"></div>
+    <div class="sub" style="margin-bottom:10px">${inv?'You can edit this balance any time — handy for fixing a mistyped figure.':'This is your starting capital. Log growth, deposits, or withdrawals afterward and the balance will update on its own.'}</div>
+    <div class="sheet-actions"><button class="btn-secondary" onclick="closeSheet()">Cancel</button><button class="btn-primary" onclick="saveInvestment('${id||''}')">Save</button></div>
+    ${inv?`<button class="btn-danger" onclick="deleteInvestment('${id}')">Delete</button>`:''}
+  `);
+}
+function saveInvestment(id){
+  const name=document.getElementById('f-name').value.trim();
+  const type=document.getElementById('f-itype').value;
+  const amount=parseFloat(document.getElementById('f-amount').value)||0;
+  if(!name) return toast('Enter a name');
+  if(id){ const i=DATA.investments.find(i=>i.id===id); Object.assign(i,{name,type,amount}); }
+  else DATA.investments.push({id:uid(), name, type, amount});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteInvestment(id){ DATA.investments=DATA.investments.filter(i=>i.id!==id); DATA.earnings=DATA.earnings.filter(e=>e.investmentId!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+function renderInvestments(){
+  const summaryEl=document.getElementById('investmentsSummary');
+  const totalBalance=DATA.investments.reduce((s,i)=>s+i.amount,0);
+  summaryEl.innerHTML = `<div class="row"><div class="sub">Total across investments</div><div class="val pos">${peso(totalBalance)}</div></div>`;
+  const el=document.getElementById('investmentsList');
+  if(!DATA.investments.length){ el.innerHTML=`<div class="empty"><b>No investments yet</b>Add trading, business, stocks, or anything else you're growing.</div>`; return; }
+  el.innerHTML=DATA.investments.map(inv=>{
+    const entries=[...DATA.earnings.filter(e=>e.investmentId===inv.id)].sort((a,b)=>b.date.localeCompare(a.date));
+    return `<div class="card">
+      <div class="row" onclick="openInvestmentModal('${inv.id}')" style="cursor:pointer">
+        <div><div class="title">${inv.name}<span class="type-tag">${INVESTMENT_TYPES[inv.type]||'Other'}</span></div></div>
+        <div class="val">${peso(inv.amount)}</div>
+      </div>
+      <button class="icon-btn" style="padding-left:0" onclick="openEarningModal('','${inv.id}')">+ log growth / deposit / withdrawal</button>
+      ${entries.length?`<div class="stitch thin"></div>`+entries.slice(0,6).map(e=>{
+        const k=ENTRY_KINDS[e.kind]||ENTRY_KINDS.earning;
+        return `<div class="installment-row" style="cursor:pointer" onclick="openEarningModal('${e.id}')"><span>${fmtDate(parseLocalDate(e.date))} · ${k.label.split(' (')[0]}${e.note?' · '+e.note:''}</span><span class="mono" style="color:${k.sign>0?'var(--green)':'var(--rust)'}">${k.sign>0?'+':'-'}${peso(e.amount)}</span></div>`;
+      }).join(''):''}
+    </div>`;
+  }).join('');
+}
+
+/* ---- growth / deposit / withdrawal log (editable, tied to an investment, mutates its balance) ---- */
+function openEarningModal(id, presetInvestmentId){
+  const e = id ? DATA.earnings.find(e=>e.id===id) : null;
+  const invId = e ? e.investmentId : (presetInvestmentId||(DATA.investments[0]?DATA.investments[0].id:''));
+  if(!DATA.investments.length) return toast('Add an investment first');
+  openSheet(`
+    <h3>${e?'Edit entry':'Log an entry'}</h3>
+    <div class="field"><label>Investment</label><select id="f-inv">${DATA.investments.map(inv=>`<option value="${inv.id}" ${invId===inv.id?'selected':''}>${inv.name}</option>`).join('')}</select></div>
+    <div class="field"><label>Type</label><select id="f-kind">${Object.entries(ENTRY_KINDS).map(([k,v])=>`<option value="${k}" ${e&&e.kind===k?'selected':(!e&&k==='earning'?'selected':'')}>${v.label}</option>`).join('')}</select></div>
+    <div class="field-row">
+      <div class="field"><label>Amount</label><input id="f-amount" type="number" step="0.01" value="${e?e.amount:''}"></div>
+      <div class="field"><label>Date</label><input id="f-date" type="date" value="${e?e.date:toLocalDateStr(new Date())}"></div>
+    </div>
+    <div class="field"><label>Note</label><input id="f-note" value="${e?(e.note||''):''}" placeholder="optional"></div>
+    <div class="sub" style="margin-bottom:6px">Earnings and deposits add to the balance; withdrawals take away from it. You can edit any entry later if it was a mistake.</div>
+    <div class="sheet-actions"><button class="btn-secondary" onclick="closeSheet()">Cancel</button><button class="btn-primary" onclick="saveEarning('${id||''}')">Save</button></div>
+    ${e?`<button class="btn-danger" onclick="deleteEarning('${id}')">Delete</button>`:''}
+  `);
+}
+function saveEarning(id){
+  const investmentId=document.getElementById('f-inv').value;
+  const kind=document.getElementById('f-kind').value;
+  const amount=parseFloat(document.getElementById('f-amount').value)||0;
+  const date=document.getElementById('f-date').value || toLocalDateStr(new Date());
+  const note=document.getElementById('f-note').value.trim();
+  if(!investmentId) return toast('Pick an investment');
+  if(!amount) return toast('Enter an amount');
+  if(id){
+    const e=DATA.earnings.find(e=>e.id===id);
+    applyEntryEffect(e, -1);
+    Object.assign(e,{investmentId,kind,amount,date,note});
+    applyEntryEffect(e, 1);
+  } else {
+    const e={id:uid(), investmentId, kind, amount, date, note};
+    DATA.earnings.unshift(e);
+    applyEntryEffect(e, 1);
+  }
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteEarning(id){
+  const e=DATA.earnings.find(e=>e.id===id);
+  if(e) applyEntryEffect(e, -1);
+  DATA.earnings=DATA.earnings.filter(e=>e.id!==id);
+  save(); closeSheet(); renderAll(); toast('Deleted');
+}
+
+/* =========================================================
+   BUDGETS (linked to a category)
+========================================================= */
+function openBudgetModal(id){
+  const b = id ? DATA.budgets.find(b=>b.id===id) : null;
+  const expenseCats=DATA.categories.filter(c=>c.kind==='expense');
+  openSheet(`
+    <h3>${b?'Edit budget':'Add budget'}</h3>
+    <div class="field"><label>Category</label><select id="f-cat">${expenseCats.map(c=>`<option value="${c.id}" ${b&&b.categoryId===c.id?'selected':''}>${c.name}</option>`).join('') || '<option value="">Add an expense category first</option>'}</select></div>
+    <div class="field"><label>Monthly limit</label><input id="f-limit" type="number" step="0.01" value="${b?b.limit:''}"></div>
+    <div class="sheet-actions"><button class="btn-secondary" onclick="closeSheet()">Cancel</button><button class="btn-primary" onclick="saveBudget('${id||''}')">Save</button></div>
+    ${b?`<button class="btn-danger" onclick="deleteBudget('${id}')">Delete</button>`:''}
+  `);
+}
+function saveBudget(id){
+  const categoryId=document.getElementById('f-cat').value;
+  const limit=parseFloat(document.getElementById('f-limit').value)||0;
+  if(!categoryId) return toast('Pick a category');
+  if(id){ const b=DATA.budgets.find(b=>b.id===id); b.categoryId=categoryId; b.limit=limit; }
+  else DATA.budgets.push({id:uid(), categoryId, limit});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteBudget(id){ DATA.budgets=DATA.budgets.filter(b=>b.id!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+function renderBudgets(){
+  const el=document.getElementById('budgetsList');
+  if(!DATA.budgets.length){ el.innerHTML=`<div class="empty"><b>No budgets set</b>Cap your spending per category, e.g. Food ₱3,000/month.</div>`; return; }
+  const monthStr=toLocalDateStr(new Date()).slice(0,7);
+  el.innerHTML=DATA.budgets.map(b=>{
+    const cat=DATA.categories.find(c=>c.id===b.categoryId);
+    const spent=DATA.transactions.filter(t=>t.categoryId===b.categoryId && t.type==='expense' && t.date.startsWith(monthStr)).reduce((s,t)=>s+t.amount,0);
+    const pct=b.limit? Math.min(100, Math.round(spent/b.limit*100)) : 0;
+    return `<div class="card" onclick="openBudgetModal('${b.id}')">
+      <div class="row"><div class="title">${cat?cat.name:'Uncategorized'}</div><div class="val ${pct>=100?'neg':''}">${peso(spent)} / ${peso(b.limit)}</div></div>
+      <div class="budget-bar"><div style="height:100%; width:${pct}%; background:${pct>=100?'var(--rust)':'var(--gold)'}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+/* =========================================================
+   BILLS & CONTRIBUTIONS (contributions editable, never in Upcoming)
+========================================================= */
+function openBillModal(id, category){
+  const b = id ? DATA.bills.find(b=>b.id===id) : null;
+  category = b ? b.category : category;
+  const label = category==='contribution' ? 'contribution' : 'bill';
+  openSheet(`
+    <h3>${b?'Edit '+label:'Add '+label}</h3>
+    <div class="field"><label>Name</label><input id="f-name" value="${b?b.name:''}" placeholder="${category==='contribution'?'e.g. SSS':'e.g. Electricity'}"></div>
+    <div class="field-row">
+      <div class="field"><label>Amount</label><input id="f-amount" type="number" step="0.01" value="${b?b.amount:''}"></div>
+      <div class="field"><label>Due day of month</label><input id="f-dueday" type="number" min="1" max="31" value="${b?b.dueDay:15}"></div>
+    </div>
+    <div class="settings-item" style="border:none; padding:4px 0 10px"><div class="label">Paid this cycle?</div><input type="checkbox" class="checkbox" id="f-paid" ${b&&b.paid?'checked':''}></div>
+    <div class="sheet-actions"><button class="btn-secondary" onclick="closeSheet()">Cancel</button><button class="btn-primary" onclick="saveBill('${id||''}','${category}')">Save</button></div>
+    ${b?`<button class="btn-danger" onclick="deleteBill('${id}')">Delete</button>`:''}
+  `);
+}
+function saveBill(id, category){
+  const name=document.getElementById('f-name').value.trim();
+  const amount=parseFloat(document.getElementById('f-amount').value)||0;
+  const dueDay=Math.min(31, Math.max(1, parseInt(document.getElementById('f-dueday').value)||1));
+  const paid=document.getElementById('f-paid').checked;
+  if(!name) return toast('Enter a name');
+  if(id){ const b=DATA.bills.find(b=>b.id===id); Object.assign(b,{name,amount,dueDay,paid}); }
+  else DATA.bills.push({id:uid(), name, amount, dueDay, category, paid});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteBill(id){ DATA.bills=DATA.bills.filter(b=>b.id!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+function nextDueDate(dueDay){
+  const today=stripTime(new Date());
+  let year=today.getFullYear(), month=today.getMonth();
+  let day=Math.min(dueDay, lastDayOfMonth(new Date(year,month,1)));
+  let due=new Date(year,month,day);
+  if(due < today){ month+=1; if(month>11){month=0; year+=1;} day=Math.min(dueDay, lastDayOfMonth(new Date(year,month,1))); due=new Date(year,month,day); }
+  return due;
+}
+function renderBills(){
+  const el=document.getElementById('billsList');
+  const bills=DATA.bills.filter(b=>b.category==='bill');
+  if(!bills.length){ el.innerHTML=`<div class="empty"><b>No bills yet</b>Add electricity, water, rent, or anything recurring.</div>`; return; }
+  el.innerHTML=bills.map(b=>{
+    const due=nextDueDate(b.dueDay);
+    return `<div class="card" onclick="openBillModal('${b.id}')">
+      <div class="row"><div><div class="title">${b.name}</div><div class="sub">due day ${b.dueDay} · next ${fmtDate(due)}</div></div>
+      <div style="text-align:right"><div class="val">${peso(b.amount)}</div><span class="${b.paid?'paid-tag':'unpaid-tag'}" style="margin-top:4px; display:inline-block">${b.paid?'Paid':'Unpaid'}</span></div></div>
+    </div>`;
+  }).join('');
+}
+function renderContributions(){
+  const el=document.getElementById('contributionsList');
+  const cons=DATA.bills.filter(b=>b.category==='contribution');
+  if(!cons.length){ el.innerHTML=`<div class="empty"><b>No contributions yet</b>SSS, Pag-IBIG, PhilHealth — editable here, kept separate from Upcoming.</div>`; return; }
+  el.innerHTML=cons.map(b=>{
+    return `<div class="card" onclick="openBillModal('${b.id}')">
+      <div class="row"><div><div class="title">${b.name}</div><div class="sub">due day ${b.dueDay}</div></div>
+      <div style="text-align:right"><div class="val">${peso(b.amount)}</div><span class="${b.paid?'paid-tag':'unpaid-tag'}" style="margin-top:4px; display:inline-block">${b.paid?'Paid':'Unpaid'}</span></div></div>
+    </div>`;
+  }).join('');
+}
+
+/* =========================================================
+   PAYDAY (correct, non-shifted date generation) + CASH ADVANCE
+========================================================= */
+function prevPaydayDate(d, payCycle){
+  if(payCycle==='Weekly') return addDays(d,-7);
+  if(payCycle==='Biweekly') return addDays(d,-14);
+  if(payCycle==='Semi-monthly'){
+    if(d.getDate()===15) return new Date(d.getFullYear(), d.getMonth()-1, lastDayOfMonth(new Date(d.getFullYear(),d.getMonth()-1,1)));
+    return new Date(d.getFullYear(), d.getMonth(), 15);
+  }
+  return new Date(d.getFullYear(), d.getMonth()-1, d.getDate()); // Monthly
+}
+function nextNPaydays(n){
+  const {payCycle, nextPayday} = DATA.settings;
+  const start = parseLocalDate(nextPayday);
+  if(!start) return [];
+  let d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const dates=[];
+  for(let i=0;i<n;i++){
+    dates.push(new Date(d));
+    if(payCycle==='Weekly') d = addDays(d,7);
+    else if(payCycle==='Biweekly') d = addDays(d,14);
+    else if(payCycle==='Semi-monthly'){
+      if(d.getDate()<=15) d = new Date(d.getFullYear(), d.getMonth(), lastDayOfMonth(d));
+      else d = new Date(d.getFullYear(), d.getMonth()+1, 15);
+    } else { // Monthly
+      d = new Date(d.getFullYear(), d.getMonth()+1, d.getDate());
+    }
+  }
+  return dates;
+}
+function renderPaydaySchedule(){
+  document.getElementById('payCycleSelect').value = DATA.settings.payCycle;
+  document.getElementById('nextPaydayInput').value = DATA.settings.nextPayday;
+  document.getElementById('salaryPerCycle').value = DATA.settings.salaryPerCycle || '';
+  document.getElementById('dailyPayMode').checked = !!DATA.settings.dailyPayMode;
+  const el=document.getElementById('paydaySchedule');
+  if(!DATA.settings.nextPayday){ el.innerHTML=`<div class="sub">Set your first/next payday above to generate a schedule.</div>`; renderDailyPaySection(); return; }
+  const dates=nextNPaydays(3);
+
+  if(DATA.settings.dailyPayMode){
+    const periodLen = Math.round((dates[0]-addDays(prevPaydayDate(dates[0],DATA.settings.payCycle),1))/86400000)+1;
+    const totalAllLogged = DATA.dailyPay.reduce((s,e)=>s+e.amount,0);
+    const avgPerDay = DATA.dailyPay.length ? totalAllLogged/DATA.dailyPay.length : (DATA.settings.salaryPerCycle||0)/(periodLen||1);
+    el.innerHTML = dates.map((d,i)=>{
+      let amount, tag;
+      if(i===0){
+        const start=addDays(prevPaydayDate(d,DATA.settings.payCycle),1);
+        amount = DATA.dailyPay.filter(e=>{const ed=parseLocalDate(e.date); return ed>=start && ed<=d;}).reduce((s,e)=>s+e.amount,0);
+        tag = `<span class="mono">${peso(amount)}</span>`;
+      } else {
+        amount = avgPerDay*periodLen;
+        tag = `<span class="mono">~${peso(amount)} est.</span>`;
+      }
+      return `<div class="payday-row"><span>${fmtDate(d)}${i===0?' (next)':''}</span>${tag}</div>`;
+    }).join('');
+  } else {
+    el.innerHTML = dates.map((d,i)=>`<div class="payday-row"><span>${fmtDate(d)}${i===0?' (next)':''}</span><span class="mono">${peso(DATA.settings.salaryPerCycle)}</span></div>`).join('')
+      + `<div class="payday-row"><span class="sub">Per payday to budget</span><span class="mono val pos">${peso(DATA.settings.salaryPerCycle)}</span></div>`;
+  }
+  renderDailyPaySection();
+}
+function updateSettings(){
+  DATA.settings.payCycle = document.getElementById('payCycleSelect').value;
+  DATA.settings.nextPayday = document.getElementById('nextPaydayInput').value;
+  DATA.settings.salaryPerCycle = parseFloat(document.getElementById('salaryPerCycle').value)||0;
+  DATA.settings.thirteenthReceived = document.getElementById('thirteenthReceived').checked;
+  DATA.settings.dailyPayMode = document.getElementById('dailyPayMode').checked;
+  save(); renderAll();
+}
+
+/* ---- daily pay log (for variable, day-to-day pay within one pay period) ---- */
+function renderDailyPaySection(){
+  const el=document.getElementById('dailyPaySection');
+  if(!DATA.settings.dailyPayMode){ el.innerHTML=''; return; }
+  const dates = DATA.settings.nextPayday ? nextNPaydays(1) : [];
+  const payday = dates[0];
+  let rangeLabel='', total=0;
+  if(payday){
+    const start = addDays(prevPaydayDate(payday, DATA.settings.payCycle),1);
+    const entries = DATA.dailyPay.filter(e=>{ const d=parseLocalDate(e.date); return d>=start && d<=payday; });
+    total = entries.reduce((s,e)=>s+e.amount,0);
+    rangeLabel = `Current pay period: ${fmtDate(start)} – ${fmtDate(payday)}`;
+  }
+  const sorted=[...DATA.dailyPay].sort((a,b)=>b.date.localeCompare(a.date));
+  el.innerHTML = `${rangeLabel?`<div class="sub" style="margin-top:4px">${rangeLabel}</div>`:''}
+    <div class="row" style="margin-top:6px"><div class="sub">Total logged this period</div><div class="val pos">${peso(total)}</div></div>
+    <button class="ghost-btn" style="width:100%; margin:10px 0 4px" onclick="openDailyPayModal()">+ Log today's pay</button>
+    ${sorted.length?sorted.slice(0,14).map(e=>`<div class="installment-row" style="cursor:pointer" onclick="openDailyPayModal('${e.id}')"><span>${fmtDate(parseLocalDate(e.date))}${e.note?' · '+e.note:''}</span><span class="mono">${peso(e.amount)}</span></div>`).join(''):`<div class="sub" style="margin-top:6px">No days logged yet.</div>`}
+  `;
+}
+function openDailyPayModal(id){
+  const e = id ? DATA.dailyPay.find(e=>e.id===id) : null;
+  openSheet(`
+    <h3>${e?'Edit this day pay':'Log a day pay'}</h3>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input id="f-date" type="date" value="${e?e.date:toLocalDateStr(new Date())}"></div>
+      <div class="field"><label>Amount</label><input id="f-amount" type="number" step="0.01" value="${e?e.amount:''}"></div>
+    </div>
+    <div class="field"><label>Note</label><input id="f-note" value="${e?(e.note||''):''}" placeholder="optional"></div>
+    <div class="sub" style="margin-bottom:6px">You can edit any day's amount later if it was wrong.</div>
+    <div class="sheet-actions"><button class="btn-secondary" onclick="closeSheet()">Cancel</button><button class="btn-primary" onclick="saveDailyPay('${id||''}')">Save</button></div>
+    ${e?`<button class="btn-danger" onclick="deleteDailyPay('${id}')">Delete</button>`:''}
+  `);
+}
+function saveDailyPay(id){
+  const date=document.getElementById('f-date').value || toLocalDateStr(new Date());
+  const amount=parseFloat(document.getElementById('f-amount').value)||0;
+  const note=document.getElementById('f-note').value.trim();
+  if(!amount) return toast('Enter an amount');
+  if(id){ const e=DATA.dailyPay.find(e=>e.id===id); Object.assign(e,{date,amount,note}); }
+  else DATA.dailyPay.push({id:uid(), date, amount, note});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteDailyPay(id){ DATA.dailyPay=DATA.dailyPay.filter(e=>e.id!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+
+function openCashAdvanceModal(id){
+  const c = id ? DATA.cashAdvances.find(c=>c.id===id) : null;
+  openSheet(`
+    <h3>${c?'Edit cash advance':'Add cash advance'}</h3>
+    <div class="field"><label>Amount</label><input id="f-amount" type="number" step="0.01" value="${c?c.amount:''}"></div>
+    <div class="field"><label>Date taken</label><input id="f-date" type="date" value="${c?c.date:toLocalDateStr(new Date())}"></div>
+    <div class="field"><label>Reason</label><input id="f-reason" value="${c?(c.reason||''):''}" placeholder="optional"></div>
+    <div class="settings-item" style="border:none; padding:4px 0 10px"><div class="label">Already repaid / deducted?</div><input type="checkbox" class="checkbox" id="f-repaid" ${c&&c.repaid?'checked':''}></div>
+    <div class="sheet-actions"><button class="btn-secondary" onclick="closeSheet()">Cancel</button><button class="btn-primary" onclick="saveCashAdvance('${id||''}')">Save</button></div>
+    ${c?`<button class="btn-danger" onclick="deleteCashAdvance('${id}')">Delete</button>`:''}
+  `);
+}
+function saveCashAdvance(id){
+  const amount=parseFloat(document.getElementById('f-amount').value)||0;
+  const date=document.getElementById('f-date').value || toLocalDateStr(new Date());
+  const reason=document.getElementById('f-reason').value.trim();
+  const repaid=document.getElementById('f-repaid').checked;
+  if(!amount) return toast('Enter an amount');
+  if(id){ const c=DATA.cashAdvances.find(c=>c.id===id); Object.assign(c,{amount,date,reason,repaid}); }
+  else DATA.cashAdvances.push({id:uid(), amount, date, reason, repaid});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteCashAdvance(id){ DATA.cashAdvances=DATA.cashAdvances.filter(c=>c.id!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+function renderCashAdvances(){
+  const el=document.getElementById('cashAdvancesList');
+  if(!DATA.cashAdvances.length){ el.innerHTML=`<div class="empty"><b>No cash advances</b>If you need an advance on your next payday, log it here.</div>`; return; }
+  const netNextPay = Math.max(0, (DATA.settings.salaryPerCycle||0) - DATA.cashAdvances.filter(c=>!c.repaid).reduce((s,c)=>s+c.amount,0));
+  el.innerHTML = `<div class="card"><div class="row"><div class="sub">Estimated take-home next payday</div><div class="val pos">${peso(netNextPay)}</div></div></div>`
+    + DATA.cashAdvances.map(c=>`<div class="card" onclick="openCashAdvanceModal('${c.id}')">
+      <div class="row"><div><div class="title">${peso(c.amount)}</div><div class="sub">${fmtDate(parseLocalDate(c.date))}${c.reason?' · '+c.reason:''}</div></div>
+      <span class="${c.repaid?'paid-tag':'unpaid-tag'}">${c.repaid?'Repaid':'Pending'}</span></div>
+    </div>`).join('');
+}
+
+/* =========================================================
+   13TH MONTH PAY
+========================================================= */
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function renderThirteenthMonth(){
+  const year=new Date().getFullYear();
+  if(!DATA.monthlyIncome[year]) DATA.monthlyIncome[year]={};
+  const grid=document.getElementById('monthlyIncomeGrid');
+  grid.innerHTML = MONTHS.map(m=>`<div class="mfield"><label>${m}</label><input type="number" step="0.01" value="${DATA.monthlyIncome[year][m]||''}" onchange="updateMonthlyIncome('${m}', this.value)"></div>`).join('');
+  document.getElementById('thirteenthReceived').checked = !!DATA.settings.thirteenthReceived;
+  computeThirteenth();
+}
+function updateMonthlyIncome(month, val){
+  const year=new Date().getFullYear();
+  if(!DATA.monthlyIncome[year]) DATA.monthlyIncome[year]={};
+  DATA.monthlyIncome[year][month]=parseFloat(val)||0;
+  save(); computeThirteenth();
+}
+function computeThirteenth(){
+  const year=new Date().getFullYear();
+  const vals=DATA.monthlyIncome[year]||{};
+  const total=MONTHS.reduce((s,m)=>s+(vals[m]||0),0);
+  document.getElementById('thirteenthEstimate').textContent = peso(total/12);
+}
+
+/* =========================================================
+   ANALYTICS
+========================================================= */
+function renderAnalytics(){
+  const el=document.getElementById('analyticsChart');
+  const months=[];
+  const today=new Date();
+  for(let i=5;i>=0;i--){ const d=new Date(today.getFullYear(), today.getMonth()-i, 1); months.push(d); }
+  const data=months.map(d=>{
+    const key=toLocalDateStr(d).slice(0,7);
+    const income=DATA.transactions.filter(t=>t.type==='income' && t.date.startsWith(key)).reduce((s,t)=>s+t.amount,0);
+    const expense=DATA.transactions.filter(t=>t.type==='expense' && t.date.startsWith(key)).reduce((s,t)=>s+t.amount,0);
+    return {d, income, expense};
+  });
+  const max=Math.max(1, ...data.map(x=>Math.max(x.income,x.expense)));
+  el.innerHTML = data.map(x=>`
+    <div class="bar-col">
+      <div style="display:flex; align-items:flex-end; gap:2px; height:100%; width:100%">
+        <div class="bar" style="height:${x.income/max*100}%; background:var(--green); flex:1"></div>
+        <div class="bar" style="height:${x.expense/max*100}%; background:var(--rust); flex:1"></div>
+      </div>
+      <div class="bar-label">${x.d.toLocaleDateString('en-PH',{month:'short'})}</div>
+    </div>`).join('');
+  const catEl=document.getElementById('topCategories');
+  const spendByCat={};
+  DATA.transactions.filter(t=>t.type==='expense').forEach(t=>{ spendByCat[t.categoryId]=(spendByCat[t.categoryId]||0)+t.amount; });
+  const top=Object.entries(spendByCat).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  if(!top.length){ catEl.innerHTML=`<div class="sub">No spending logged yet.</div>`; return; }
+  catEl.innerHTML = `<div class="sub" style="margin-bottom:8px">Top spending categories</div>` + top.map(([cid,amt])=>{
+    const cat=DATA.categories.find(c=>c.id===cid);
+    return `<div class="row" style="margin-top:6px"><div class="sub">${cat?cat.name:'Uncategorized'}</div><div class="val neg">${peso(amt)}</div></div>`;
+  }).join('');
+}
+
+/* =========================================================
+   CATEGORIES
+========================================================= */
+function openCategoryModal(id){
+  const c = id ? DATA.categories.find(c=>c.id===id) : null;
+  openSheet(`
+    <h3>${c?'Edit category':'Add category'}</h3>
+    <div class="field"><label>Name</label><input id="f-name" value="${c?c.name:''}" placeholder="e.g. Groceries"></div>
+    <div class="field"><label>Kind</label><select id="f-kind">
+      <option value="expense" ${!c||c.kind==='expense'?'selected':''}>Expense</option>
+      <option value="income" ${c&&c.kind==='income'?'selected':''}>Income</option>
+    </select></div>
+    <div class="sheet-actions"><button class="btn-secondary" onclick="closeSheet()">Cancel</button><button class="btn-primary" onclick="saveCategory('${id||''}')">Save</button></div>
+    ${c?`<button class="btn-danger" onclick="deleteCategory('${id}')">Delete</button>`:''}
+  `);
+}
+function saveCategory(id){
+  const name=document.getElementById('f-name').value.trim();
+  const kind=document.getElementById('f-kind').value;
+  if(!name) return toast('Enter a name');
+  if(id){ const c=DATA.categories.find(c=>c.id===id); c.name=name; c.kind=kind; }
+  else DATA.categories.push({id:uid(), name, kind});
+  save(); closeSheet(); renderAll(); toast('Saved');
+}
+function deleteCategory(id){ DATA.categories=DATA.categories.filter(c=>c.id!==id); save(); closeSheet(); renderAll(); toast('Deleted'); }
+function renderCategories(){
+  const el=document.getElementById('categoriesList');
+  if(!DATA.categories.length){ el.innerHTML=`<div class="empty"><b>No categories</b>Add income and expense categories to organize transactions and budgets.</div>`; return; }
+  el.innerHTML=DATA.categories.map(c=>`<div class="card" onclick="openCategoryModal('${c.id}')"><div class="row"><div class="title">${c.name}</div><span class="type-tag">${c.kind}</span></div></div>`).join('');
+}
+
+/* =========================================================
+   DASHBOARD (net worth + upcoming — bills/debts/cash advances only,
+   NEVER contributions, NEVER payday)
+========================================================= */
+function computeSums(){
+  const wallet = DATA.accounts.reduce((s,a)=>s+a.balance,0);
+  const savings = DATA.savings.reduce((s,g)=>s+g.saved,0) + DATA.savingsWallets.reduce((s,w)=>s+w.balance,0);
+  const iOwe = DATA.debts.reduce((s,d)=>s+d.remaining,0);
+  const iOwed = DATA.receivables.reduce((s,r)=>s+r.remaining,0);
+  return {wallet, savings, iOwe, iOwed};
+}
+function renderDashboard(){
+  const {wallet, savings, iOwe, iOwed} = computeSums();
+  document.getElementById('sumWallet').textContent = peso(wallet);
+  document.getElementById('sumSavingsHero').textContent = peso(savings);
+  document.getElementById('sumIOwe').textContent = '-'+peso(iOwe);
+  document.getElementById('sumIOwed').textContent = peso(iOwed);
+  document.getElementById('netWorth').textContent = peso(wallet + savings + iOwed - iOwe);
+  renderUpcoming();
+  renderRecentTxns();
+}
+function renderUpcoming(){
+  const el=document.getElementById('upcomingList');
+  const items=[];
+  // Debts and cash advances only — never bills, never contributions, never payday
+  DATA.debts.forEach(d=>{
+    const nextInst = (d.installments||[]).find(i=>!i.paid);
+    if(nextInst) items.push({label:d.name+' (debt)', amount:nextInst.amount, date:parseLocalDate(nextInst.due)});
+    else if(d.dueDate && d.remaining>0) items.push({label:d.name+' (debt)', amount:d.remaining, date:parseLocalDate(d.dueDate)});
+  });
+  DATA.cashAdvances.filter(c=>!c.repaid).forEach(c=>{
+    items.push({label:'Cash advance repayment', amount:c.amount, date:null});
+  });
+  const dated = items.filter(i=>i.date).sort((a,b)=>a.date-b.date).slice(0,5);
+  if(!dated.length){ el.innerHTML=`<div class="empty"><b>Nothing due soon</b>Debts with a due date will show up here.</div>`; return; }
+  el.innerHTML = dated.map(i=>`<div class="card">
+    <div class="row"><div class="title">${i.label}</div><div class="val neg">${peso(i.amount)}</div></div>
+    <div class="row" style="margin-top:4px"><span class="due-tag ${daysUntil(i.date)<=3?'soon':'ok'}">${fmtDate(i.date)}</span></div>
+  </div>`).join('');
+}
+
+/* =========================================================
+   DATA IMPORT / EXPORT / RESET
+========================================================= */
+function exportData(){
+  const blob=new Blob([JSON.stringify(DATA,null,2)], {type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='money-tracker-backup.json'; a.click();
+  URL.revokeObjectURL(url); toast('Exported');
+}
+function importData(evt){
+  const file=evt.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{ const parsed=JSON.parse(reader.result); for(const k in DEFAULT_DATA){ if(!(k in parsed)) parsed[k]=DEFAULT_DATA[k]; } DATA=parsed; save(); renderAll(); toast('Imported'); }
+    catch(e){ toast('Invalid backup file'); }
+  };
+  reader.readAsText(file); evt.target.value='';
+}
+function resetAll(){
+  if(!confirm('This will erase all data on this device. Continue?')) return;
+  DATA=JSON.parse(JSON.stringify(DEFAULT_DATA)); save(); renderAll(); toast('All data cleared');
+}
+
+/* =========================================================
+   RENDER ALL
+========================================================= */
+function renderAll(){
+  renderDashboard();
+  renderAccounts();
+  renderSavingsGoals(); renderSavingsWallets(); renderPaluwagan();
+  renderDebts(); renderReceivables();
+  renderInvestments();
+  renderBudgets();
+  renderBills(); renderContributions();
+  renderPaydaySchedule();
+  renderCashAdvances();
+  renderThirteenthMonth();
+  renderAnalytics();
+  renderCategories();
+}
+renderAll();
+
+/* ---------- install as an app ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
