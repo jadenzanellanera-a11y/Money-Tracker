@@ -1,15 +1,17 @@
 {
   "name": "Money Tracker",
   "short_name": "Money Tracker",
-  "description": "Wallets, savings, debts, and bills — all in one place.",
+  "description": "A private, offline-friendly personal finance tracker. All data stays on your device — nothing is ever sent online.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#12211E",
-  "theme_color": "#12211E",
+  "background_color": "#0E1917",
+  "theme_color": "#0E1917",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
