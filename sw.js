@@ -3,11 +3,12 @@
    time they load, so the app keeps opening and working even with no internet.
    It never talks to any server of ours — there isn't one. */
 
-const CACHE_NAME = 'money-tracker-v2';
+const CACHE_NAME = 'money-tracker-v4';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
+  './license-config.js',
   './icon-192.png',
   './icon-512.png'
 ];
@@ -36,6 +37,24 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const isSameOrigin = event.request.url.startsWith(self.location.origin);
   if (!isSameOrigin) return;
+
+  // The app page itself: ask the network first so updates show up right away,
+  // and fall back to the saved copy only when offline.
+  const isPage = event.request.mode === 'navigate' || /\/(index\.html)?$/.test(new URL(event.request.url).pathname);
+  if (isPage) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((c) => c || caches.match('./index.html')))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
