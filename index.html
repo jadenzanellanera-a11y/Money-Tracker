@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Money Tracker</title>
 <link rel="manifest" href="manifest.json">
+<script src="license-config.js"></script>
 <meta name="theme-color" content="#0E1917">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -128,6 +129,18 @@
 </style>
 </head>
 <body>
+
+<div class="lock-screen" id="licenseScreen" style="z-index:300">
+  <div style="max-width:340px; width:100%; text-align:center">
+    <div style="font-size:40px">🔑</div>
+    <h2 style="margin-top:14px">Activate Money Tracker</h2>
+    <div class="sub" style="margin:10px 0 18px">Enter the license key from your purchase receipt. You only need to do this once &mdash; it needs internet for this step, then the app works offline.</div>
+    <input id="licenseInput" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" autocomplete="off" autocapitalize="off" spellcheck="false" style="text-align:center">
+    <div id="licenseError" class="sub" style="color:var(--rust); min-height:20px; margin:8px 0"></div>
+    <button class="btn-primary" id="licenseBtn" style="width:100%" onclick="activateLicense()">Activate</button>
+    <a id="licenseBuyLink" class="ghost-btn" target="_blank" rel="noopener" style="display:none; margin-top:14px; text-decoration:none">Don't have a key? Get Money Tracker</a>
+  </div>
+</div>
 
 <div class="lock-screen" id="lockScreen">
   <div id="lockMainPanel">
@@ -926,6 +939,8 @@ function checkReminders(){
   if(!notifSupported() || Notification.permission!=='granted') return;
   const lockEl=document.getElementById('lockScreen');
   if(lockEl && lockEl.style.display==='flex') return; // never leak due-amounts to a locked screen
+  const licEl=document.getElementById('licenseScreen');
+  if(licEl && licEl.style.display==='flex') return;
   if(!DATA.settings.remindedLog) DATA.settings.remindedLog={};
   const today=toLocalDateStr(new Date());
   let changed=false;
@@ -2196,7 +2211,17 @@ function saveDebt(id){
   const remaining=remainingInput.disabled ? (DATA.debts.find(d=>d.id===id)||{}).remaining : (parseFloat(remainingInput.value)||amount);
   const dueDate=document.getElementById('f-due').value;
   if(!name) return toast('Enter a name');
-  if(id){ const d=DATA.debts.find(d=>d.id===id); Object.assign(d,{name,provider,interestMode,principal,interestRate,interestFixedAmount,amount,currency,remaining:(remaining!=null?remaining:amount),dueDate}); }
+  if(id){
+    const d=DATA.debts.find(d=>d.id===id);
+    let newRemaining = (remaining!=null?remaining:amount);
+    if(d.installments && d.installments.length && amount!==d.amount){
+      // Remaining is locked while a schedule exists, so move it by however much the Total changed.
+      // If the Total was never set (0), count installments already checked off as paid.
+      const paidInst = d.installments.filter(x=>x.paid).reduce((s,x)=>s+x.amount,0);
+      newRemaining = round2(Math.max(0, d.remaining + (amount - d.amount) - ((d.amount||0)===0 ? paidInst : 0)));
+    }
+    Object.assign(d,{name,provider,interestMode,principal,interestRate,interestFixedAmount,amount,currency,remaining:newRemaining,dueDate});
+  }
   else DATA.debts.push({id:uid(), name, provider, interestMode, principal, interestRate, interestFixedAmount, amount, currency, remaining, dueDate, installments:[], payments:[]});
   save(); closeSheet(); renderAll(); toast('Saved');
 }
@@ -2283,6 +2308,7 @@ function openScheduleModal(id){
     <button class="btn-primary" style="width:100%" onclick="generateSchedule('${id}')">Generate schedule</button>
     <div class="stitch thin"></div>
     <div class="subhead" style="margin-top:0">Installments</div>
+    ${(()=>{ const st=round2((d.installments||[]).reduce((s,x)=>s+x.amount,0)); return (d.installments.length && Math.abs(st-(d.amount||0))>0.009) ? `<div class="sub" style="margin-bottom:8px; color:var(--gold)">Heads up: this schedule adds up to ${fmtCur(st,d.currency)}, but the debt's Total amount is ${fmtCur(d.amount||0,d.currency)}. Edit the debt if one of them is wrong.</div>` : ''; })()}
     <div id="instList">${renderInstallments(d)}</div>
     <div class="sheet-actions"><button class="btn-secondary" style="flex:1" onclick="closeSheet()">Close</button>${d.installments.length?`<button class="btn-danger" style="flex:1; margin-top:0" onclick="clearSchedule('${id}')">Clear schedule</button>`:''}</div>
   `);
@@ -2315,7 +2341,13 @@ function generateSchedule(id){
     dt = addDays(dt, stepDays);
   }
   d.installments = installments;
-  save(); openScheduleModal(id); toast('Schedule generated, starting ' + fmtDate(parseLocalDate(startStr)));
+  // If the debt's Total amount was never filled in (still 0), the schedule would show "Paid off".
+  // Use the schedule's own total so the debt and its schedule agree.
+  if(!(d.amount>0)){
+    d.amount = round2(installments.reduce((s,x)=>s+x.amount,0));
+    d.remaining = d.amount;
+  }
+  save(); openScheduleModal(id); renderAll(); toast('Schedule generated, starting ' + fmtDate(parseLocalDate(startStr)));
 }
 function toggleInstallment(debtId, instId){
   const d = DATA.debts.find(x=>x.id===debtId);
@@ -3828,6 +3860,77 @@ function resetAll(){
 }
 
 /* =========================================================
+   LICENSE KEY GATE (Gumroad)
+   - Turned off automatically when license-config.js has no productId.
+   - The license is kept in its OWN localStorage key (not in DATA), so backups,
+     imports, "Erase all data", and PIN resets never touch it or re-lock the app.
+========================================================= */
+const LICENSE_STORE_KEY = 'mt_license_v1';
+function licenseCfg(){ return (typeof window.LICENSE_CONFIG==='object' && window.LICENSE_CONFIG) || {}; }
+function licenseGateOn(){ return !!licenseCfg().productId; }
+function readLicense(){ try{ return JSON.parse(localStorage.getItem(LICENSE_STORE_KEY)||'null'); }catch(e){ return null; } }
+function writeLicense(o){ try{ localStorage.setItem(LICENSE_STORE_KEY, JSON.stringify(o)); }catch(e){} }
+function isLicensed(){
+  const l=readLicense();
+  return !!(l && l.key && l.productId===licenseCfg().productId && l.valid!==false);
+}
+async function gumroadVerify(key, increment){
+  const body = new URLSearchParams({product_id:licenseCfg().productId, license_key:key, increment_uses_count: increment?'true':'false'});
+  const res = await fetch('https://api.gumroad.com/v2/licenses/verify', {method:'POST', body});
+  let data=null; try{ data = await res.json(); }catch(e){}
+  return {status:res.status, data};
+}
+function showLicenseScreen(){
+  document.getElementById('licenseScreen').style.display='flex';
+  const b=document.getElementById('licenseBuyLink'); const u=licenseCfg().buyUrl;
+  if(b){ if(u){ b.href=u; b.style.display='inline-block'; } else { b.style.display='none'; } }
+}
+function setLicenseMsg(msg){ document.getElementById('licenseError').textContent = msg; }
+async function activateLicense(){
+  const key=(document.getElementById('licenseInput').value||'').trim();
+  const btn=document.getElementById('licenseBtn');
+  if(!key){ setLicenseMsg('Please paste your license key.'); return; }
+  if(!navigator.onLine){ setLicenseMsg('You need internet for this one-time step. Connect and try again.'); return; }
+  btn.disabled=true; setLicenseMsg('Checking…');
+  try{
+    const limit = licenseCfg().deviceLimit || 3;
+    const chk = await gumroadVerify(key, false);   // look first, without using up a device slot
+    if(!chk.data || chk.data.success!==true){
+      setLicenseMsg(chk.status===404 ? "That key wasn't recognized. Check it and try again." : "Couldn't verify that key. Check it and try again.");
+      btn.disabled=false; return;
+    }
+    const p=chk.data.purchase||{};
+    if(p.refunded || p.chargebacked){ setLicenseMsg('This purchase was refunded, so the key is no longer active.'); btn.disabled=false; return; }
+    if((chk.data.uses||0) >= limit){ setLicenseMsg('This key has already been used on '+limit+' devices.'); btn.disabled=false; return; }
+    const act = await gumroadVerify(key, true);    // now claim a device slot
+    if(!act.data || act.data.success!==true){ setLicenseMsg("Couldn't activate that key. Please try again."); btn.disabled=false; return; }
+    const now=new Date().toISOString();
+    writeLicense({key, productId:licenseCfg().productId, activatedAt:now, lastCheck:now, valid:true});
+    document.getElementById('licenseScreen').style.display='none';
+    setLicenseMsg('');
+    startAfterLicense();
+  }catch(e){
+    setLicenseMsg("Couldn't reach the license server. Check your internet and try again.");
+  }
+  btn.disabled=false;
+}
+/* Every ~14 days, when online, quietly re-check that the purchase wasn't refunded.
+   Never blocks the app offline, and never uses up a device slot. */
+async function recheckLicense(){
+  const l=readLicense();
+  if(!l || !navigator.onLine) return;
+  if(Date.now() - new Date(l.lastCheck||0).getTime() < 14*24*3600*1000) return;
+  try{
+    const r = await gumroadVerify(l.key, false);
+    if(r.data && r.data.success===true){
+      const p=r.data.purchase||{};
+      if(p.refunded || p.chargebacked){ l.valid=false; writeLicense(l); location.reload(); return; }
+      l.lastCheck=new Date().toISOString(); writeLicense(l);
+    }
+  }catch(e){ /* offline or server hiccup — stay unlocked */ }
+}
+
+/* =========================================================
    RENDER ALL
 ========================================================= */
 function renderAll(){
@@ -3848,10 +3951,14 @@ function renderAll(){
   renderAppLockScreen();
   renderReminderSettings();
 }
+function startAfterLicense(){
+  if(!DATA.settings.onboardingComplete) showOnboarding();
+  else if(DATA.settings.pinEnabled && DATA.settings.pinHash) showLockScreen();
+  else checkReminders();
+}
 renderAll();
-if(!DATA.settings.onboardingComplete) showOnboarding();
-else if(DATA.settings.pinEnabled && DATA.settings.pinHash) showLockScreen();
-else checkReminders();
+if(licenseGateOn() && !isLicensed()) showLicenseScreen();
+else { startAfterLicense(); recheckLicense(); }
 if(navigator.onLine) refreshRates(true);
 setInterval(checkReminders, 5*60*1000); // simple periodic re-check, no background scheduler involved
 /* Register the service worker so the app keeps working offline once it's been opened once.
